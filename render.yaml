@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: tron-quantum-bot
+    runtime: node
+    repo: https://github.com/yourusername/tron-quantum-bot
+    plan: free
+    buildCommand: npm install 
+    startCommand: bash start.sh
+    envVars:
+      - key: NODE_VERSION
+        value: 18.18.0
+      - key: RENDER
+        value: true
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: tron-bot-data
+      mountPath: /opt/render/project/src
+      sizeGB: 1
