@@ -1,0 +1,22 @@
+{
+    "name": "tron-quantum-bot",
+    "version": "3.0.0",
+    "description": "TRON Quantum Auto-Withdraw Bot - Enterprise Edition",
+    "main": "auto_sweep.js",
+    "scripts": {
+        "start": "node auto_sweep.js",
+        "dev": "nodemon auto_sweep.js",
+        "vercel-build": "echo 'Building for Vercel...'"
+    },
+    "dependencies": {
+       
+        "tronweb": "^4.4.0",
+        "ws": "^8.14.2"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.1"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}

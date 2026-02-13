@@ -1,0 +1,1231 @@
+<!-- public/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRON Quantum Auto-Withdraw | Enterprise</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00e5ff;
+            --secondary: #7700ff;
+            --accent: #ff00cc;
+            --dark: #0a0a1a;
+            --darker: #050510;
+            --terminal: #00ffaa;
+            --warning: #ffaa00;
+            --danger: #ff0055;
+            --success: #00ff88;
+            --panel-bg: rgba(15, 15, 35, 0.95);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--darker);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(119, 0, 255, 0.08) 0%, transparent 25%),
+                radial-gradient(circle at 90% 80%, rgba(255, 0, 204, 0.08) 0%, transparent 25%);
+        }
+        
+        /* Login Screen */
+        .login-screen {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: linear-gradient(135deg, var(--darker), #0a0a2a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .login-container {
+            background: var(--panel-bg);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        
+        .login-logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2rem;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .login-input {
+            width: 100%;
+            padding: 14px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .login-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.2);
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 229, 255, 0.3);
+        }
+        
+        .login-error {
+            color: var(--danger);
+            margin-top: 15px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        
+        /* Main Interface */
+        .cyber-grid {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 229, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 229, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .header {
+            font-family: 'Orbitron', sans-serif;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+            background: rgba(10, 10, 26, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--danger);
+        }
+        
+        .status-dot.active {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: var(--panel-bg);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        
+        .terminal-panel {
+            flex: 1;
+            min-width: 350px;
+            border-color: var(--terminal);
+        }
+        
+        .config-panel {
+            flex: 1;
+            min-width: 500px;
+            border-color: var(--secondary);
+        }
+        
+        .panel-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+        }
+        
+        .terminal {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            padding: 15px;
+            height: 450px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            border: 1px solid rgba(0, 255, 170, 0.1);
+        }
+        
+        .terminal-line {
+            margin-bottom: 5px;
+            color: var(--terminal);
+            word-break: break-word;
+        }
+        
+        .terminal-line.error { color: var(--danger); }
+        .terminal-line.success { color: var(--success); }
+        .terminal-line.warning { color: var(--warning); }
+        .terminal-line.info { color: var(--primary); }
+        
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex: 1;
+        }
+        
+        .btn-sm {
+            padding: 8px 15px;
+            font-size: 0.8rem;
+        }
+        
+        .btn-start {
+            background: linear-gradient(135deg, var(--success), #00cc77);
+            color: white;
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, var(--danger), #cc0044);
+            color: white;
+        }
+        
+        .btn-test {
+            background: linear-gradient(135deg, var(--warning), #cc8800);
+            color: white;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #0088cc);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--secondary), #5500aa);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 229, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.1);
+        }
+        
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 229, 255, 0.2);
+            padding-bottom: 5px;
+        }
+        
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            background: rgba(0, 0, 0, 0.3);
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .stat-card {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+        }
+        
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px;
+            background: var(--panel-bg);
+            border-left: 4px solid var(--success);
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            z-index: 2000;
+            max-width: 400px;
+            transform: translateX(100%);
+            animation: slideIn 0.3s forwards;
+            backdrop-filter: blur(10px);
+        }
+        
+        @keyframes slideIn {
+            to { transform: translateX(0); }
+        }
+        
+        .notification.error { border-left-color: var(--danger); }
+        .notification.warning { border-left-color: var(--warning); }
+        .notification.info { border-left-color: var(--primary); }
+        
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 10px 0;
+        }
+        
+        /* ✅ FIXED: Checkbox covers the entire switch and is clickable */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+        
+        .switch input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+            margin: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 0, 204, 0.3);
+            transition: 0.2s;
+            border-radius: 34px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: var(--success);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        
+        .logout-btn {
+            background: rgba(255, 0, 85, 0.2);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(255, 0, 85, 0.3);
+        }
+        
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+            }
+            .config-panel, .terminal-panel {
+                min-width: 100%;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                padding: 1rem;
+            }
+            .control-buttons {
+                flex-wrap: wrap;
+            }
+            .btn {
+                min-width: 120px;
+            }
+            .tabs {
+                overflow-x: auto;
+            }
+            .terminal {
+                height: 350px;
+            }
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.5; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 0.5; transform: scale(0.95); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-container">
+            <div class="login-logo">
+                <i class="fas fa-robot"></i>
+                TRON QUANTUM BOT
+            </div>
+            <p style="color: var(--terminal); margin-bottom: 30px; font-size: 0.9rem;">
+                Enterprise-Grade Auto-Withdraw System
+            </p>
+            <input type="password" id="adminPassword" class="login-input" placeholder="Enter Admin Password" autocomplete="off">
+            <button class="login-btn" id="loginBtn">
+                <i class="fas fa-lock"></i> ACCESS CONTROL PANEL
+            </button>
+            <div class="login-error" id="loginError">
+                <i class="fas fa-exclamation-circle"></i> Invalid password
+            </div>
+            <div style="margin-top: 25px; color: rgba(255,255,255,0.5); font-size: 0.8rem;">
+                <p>Default password: <code>admin123</code></p>
+                <p style="margin-top: 10px;">Change password in Security Settings</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Interface -->
+    <div class="main-interface" id="mainInterface" style="display: none;">
+        <div class="cyber-grid"></div>
+        
+        <div class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-robot"></i> TRON QUANTUM BOT</h1>
+                <div class="header-status">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="connectionStatus">Offline</span>
+                    <span id="botStatus" style="margin-left: 15px;">Stopped</span>
+                </div>
+            </div>
+            <div class="header-controls">
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+        
+        <div class="container">
+            <!-- Terminal Panel -->
+            <div class="panel terminal-panel">
+                <div class="panel-title">
+                    <i class="fas fa-terminal"></i> QUANTUM TERMINAL
+                    <span class="badge badge-pro">ENTERPRISE</span>
+                </div>
+                <div class="terminal" id="terminal">
+                    <div class="terminal-line">TRON Quantum Auto-Withdraw Bot v3.0</div>
+                    <div class="terminal-line">Enterprise Edition - Production Ready</div>
+                    <div class="terminal-line">Server: Connected</div>
+                    <div class="terminal-line success">>> Ready to configure and deploy</div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statProcessed">0</div>
+                        <div class="stat-label">Transactions</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statBalance">0 TRX</div>
+                        <div class="stat-label">Forwarded</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statUptime">00:00:00</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statSigners">0/2</div>
+                        <div class="stat-label">Multisig</div>
+                    </div>
+                </div>
+                
+                <div class="control-buttons">
+                    <button class="btn btn-start" id="btnStart">
+                        <i class="fas fa-play"></i> START BOT
+                    </button>
+                    <button class="btn btn-stop" id="btnStop" disabled>
+                        <i class="fas fa-stop"></i> STOP BOT
+                    </button>
+                    <button class="btn btn-test" id="btnTest">
+                        <i class="fas fa-vial"></i> TEST
+                    </button>
+                    <button class="btn btn-primary" onclick="saveConfig()">
+                        <i class="fas fa-save"></i> SAVE
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Configuration Panel -->
+            <div class="panel config-panel">
+                <div class="tabs">
+                    <div class="tab active" data-tab="basic">BASIC</div>
+                    <div class="tab" data-tab="multisig">MULTISIG</div>
+                    <div class="tab" data-tab="advanced">ADVANCED</div>
+                    <div class="tab" data-tab="telegram">TELEGRAM</div>
+                </div>
+                
+                <!-- Basic Tab -->
+                <div class="tab-content active" id="basic-tab">
+                    <div class="form-group">
+                        <label><i class="fas fa-network-wired"></i> TRON NETWORK</label>
+                        <select id="network">
+                            <option value="mainnet">Mainnet (Production)</option>
+                            <option value="shasta" selected>Shasta Testnet (Testing)</option>
+                            <option value="nile">Nile Testnet</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-key"></i> TRONGRID API KEY</label>
+                        <input type="text" id="tronApiKey" placeholder="Get from trongrid.io (optional)">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-bolt"></i> RPC ENDPOINTS (One per line)</label>
+                        <textarea id="rpcEndpoints" rows="3">https://api.shasta.trongrid.io
+https://shasta.tronscan.org/api</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-wallet"></i> MONITORING ADDRESSES</label>
+                        <textarea id="monitorAddresses" rows="3" placeholder="One TRX address per line"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-paper-plane"></i> RECEIVER ADDRESS</label>
+                        <input type="text" id="receiverAddress" placeholder="Destination TRX address">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-filter"></i> MINIMUM AMOUNT (TRX)</label>
+                        <input type="number" id="minAmount" value="1" step="0.01" min="0.1">
+                    </div>
+                    
+                    <div class="toggle-switch">
+                        <label><i class="fas fa-robot"></i> ENABLE AUTO-WITHDRAW</label>
+                        <div class="switch">
+                            <input type="checkbox" id="autoWithdraw" checked>
+                            <span class="slider"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Multisig Tab -->
+                <div class="tab-content" id="multisig-tab">
+                    <div class="form-group">
+                        <label><i class="fas fa-user-shield"></i> MULTISIG MODE</label>
+                        <select id="multisigMode">
+                            <option value="single">Single Signature (Fast)</option>
+                            <option value="multisig" selected>Multi-Signature (Secure)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Signer 1 Private Key</label>
+                        <input type="password" id="signerKey1" placeholder="Enter private key">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Signer 2 Private Key (Optional)</label>
+                        <input type="password" id="signerKey2" placeholder="Enter private key">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-key"></i> REQUIRED SIGNATURES</label>
+                        <input type="number" id="requiredSignatures" min="1" max="2" value="2">
+                    </div>
+                </div>
+                
+                <!-- ✅ FIXED: Advanced Tab with Reserve Amount (not Fee Limit) -->
+                <div class="tab-content" id="advanced-tab">
+                    <div class="form-group">
+                        <label><i class="fas fa-cogs"></i> CHECK INTERVAL (Seconds)</label>
+                        <input type="number" id="checkInterval" value="10" min="2" max="60">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-piggy-bank"></i> RESERVE AMOUNT (TRX)</label>
+                        <input type="number" id="feeLimit" value="5" step="0.1" min="2">
+                        <small style="color: var(--terminal); display: block; margin-top: 5px;">
+                            ⚠️ This amount will remain on the source address to cover transaction fees.  
+                            For multisig, keep at least 5 TRX.
+                        </small>
+                    </div>
+                    
+                    <div class="toggle-switch">
+                        <label><i class="fas fa-random"></i> RANDOMIZED INTERVALS</label>
+                        <div class="switch">
+                            <input type="checkbox" id="randomIntervals" checked>
+                            <span class="slider"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-switch">
+                        <label><i class="fas fa-history"></i> AUTO-RETRY FAILED TRANSACTIONS</label>
+                        <div class="switch">
+                            <input type="checkbox" id="autoRetry" checked>
+                            <span class="slider"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-switch">
+                        <label><i class="fas fa-broadcast-tower"></i> AUTO-SWITCH RPC ON FAILURE</label>
+                        <div class="switch">
+                            <input type="checkbox" id="autoSwitchRPC" checked>
+                            <span class="slider"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Telegram Tab -->
+                <div class="tab-content" id="telegram-tab">
+                    <div class="form-group">
+                        <label><i class="fab fa-telegram"></i> TELEGRAM BOT TOKEN</label>
+                        <input type="password" id="telegramToken" placeholder="Get from @BotFather">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><i class="fas fa-id-card"></i> TELEGRAM CHAT ID</label>
+                        <input type="text" id="telegramChatId" placeholder="Get from @userinfobot">
+                    </div>
+                    
+                    <div class="toggle-switch">
+                        <label><i class="fas fa-bell"></i> NOTIFY ON RECEIVE</label>
+                        <div class="switch">
+                            <input type="checkbox" id="notifyReceive" checked>
+                            <span class="slider"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-switch">
+                        <label><i class="fas fa-paper-plane"></i> NOTIFY ON SEND</label>
+                        <div class="switch">
+                            <input type="checkbox" id="notifySend" checked>
+                            <span class="slider"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-switch">
+                        <label><i class="fas fa-exclamation-triangle"></i> NOTIFY ON ERROR</label>
+                        <div class="switch">
+                            <input type="checkbox" id="notifyError" checked>
+                            <span class="slider"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        class WebClient {
+            constructor() {
+                this.ws = null;
+                this.reconnectAttempts = 0;
+                this.maxReconnectAttempts = 10;
+                this.config = {};
+                this.status = {};
+                this.isConnected = false;
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.connectWebSocket();
+                this.setupAutoSave();
+            }
+            
+            connectWebSocket() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}`;
+                
+                this.ws = new WebSocket(wsUrl);
+                
+                this.ws.onopen = () => {
+                    console.log('WebSocket connected');
+                    this.isConnected = true;
+                    this.reconnectAttempts = 0;
+                    this.updateConnectionStatus(true);
+                };
+                
+                this.ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        this.handleMessage(data);
+                    } catch (error) {
+                        console.error('Error parsing message:', error);
+                    }
+                };
+                
+                this.ws.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    this.isConnected = false;
+                    this.updateConnectionStatus(false);
+                    this.attemptReconnect();
+                };
+                
+                this.ws.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                };
+            }
+            
+            attemptReconnect() {
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
+                    
+                    setTimeout(() => {
+                        console.log(`Reconnecting attempt ${this.reconnectAttempts}...`);
+                        this.connectWebSocket();
+                    }, delay);
+                }
+            }
+            
+            handleMessage(data) {
+                switch (data.type) {
+                    case 'init':
+                        this.config = data.data.config;
+                        this.status = data.data.status;
+                        this.updateUI();
+                        break;
+                        
+                    case 'log':
+                        this.addLog(data.data.message, data.data.type);
+                        break;
+                        
+                    case 'status':
+                        this.status = data.data;
+                        this.updateStatusUI();
+                        break;
+                        
+                    case 'config':
+                        this.config = data.data;
+                        this.updateConfigUI();
+                        break;
+                        
+                    case 'botStarted':
+                        this.status = data.data;
+                        this.updateBotStatus(true);
+                        break;
+                        
+                    case 'botStopped':
+                        this.status = data.data;
+                        this.updateBotStatus(false);
+                        break;
+                }
+            }
+            
+            send(action, data = {}) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({ action, ...data }));
+                }
+            }
+            
+            updateConnectionStatus(connected) {
+                const dot = document.getElementById('statusDot');
+                const status = document.getElementById('connectionStatus');
+                
+                if (connected) {
+                    dot.className = 'status-dot active';
+                    status.textContent = 'Connected';
+                    status.style.color = 'var(--success)';
+                } else {
+                    dot.className = 'status-dot';
+                    status.textContent = 'Disconnected';
+                    status.style.color = 'var(--danger)';
+                }
+            }
+            
+            updateBotStatus(running) {
+                const status = document.getElementById('botStatus');
+                const startBtn = document.getElementById('btnStart');
+                const stopBtn = document.getElementById('btnStop');
+                
+                if (running) {
+                    status.textContent = 'Running';
+                    status.style.color = 'var(--success)';
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                } else {
+                    status.textContent = 'Stopped';
+                    status.style.color = 'var(--danger)';
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }
+            }
+            
+            updateStatusUI() {
+                document.getElementById('statProcessed').textContent = this.status.processedTransactions || 0;
+                document.getElementById('statBalance').textContent = `${((this.status.totalForwarded || 0) / 1_000_000).toFixed(2)} TRX`;
+                
+                if (this.status.uptime) {
+                    const seconds = Math.floor(this.status.uptime / 1000);
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    const secs = seconds % 60;
+                    document.getElementById('statUptime').textContent = 
+                        `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                }
+                
+                const signerCount = (this.config.signerKeys || []).length;
+                document.getElementById('statSigners').textContent = `${signerCount}/${this.config.requiredSignatures || 2}`;
+                
+                document.getElementById('connectionStatus').textContent = 
+                    this.status.isConnected ? `Connected (Block: ${this.status.currentBlock || 0})` : 'Disconnected';
+            }
+            
+            updateConfigUI() {
+                // Update form fields with current config
+                document.getElementById('network').value = this.config.network || 'shasta';
+                document.getElementById('tronApiKey').value = this.config.tronApiKey || '';
+                document.getElementById('rpcEndpoints').value = (this.config.rpcEndpoints || []).join('\n');
+                document.getElementById('monitorAddresses').value = (this.config.monitorAddresses || []).join('\n');
+                document.getElementById('receiverAddress').value = this.config.receiverAddress || '';
+                document.getElementById('minAmount').value = this.config.minAmount || 1;
+                document.getElementById('autoWithdraw').checked = this.config.autoWithdraw !== false;
+                document.getElementById('multisigMode').value = this.config.multisigMode || 'multisig';
+                document.getElementById('requiredSignatures').value = this.config.requiredSignatures || 2;
+                document.getElementById('checkInterval').value = (this.config.checkInterval || 10000) / 1000;
+                document.getElementById('feeLimit').value = this.config.feeLimit || 5;
+                document.getElementById('randomIntervals').checked = this.config.randomIntervals !== false;
+                document.getElementById('autoRetry').checked = this.config.autoRetry !== false;
+                document.getElementById('autoSwitchRPC').checked = this.config.autoSwitchRPC !== false;
+                document.getElementById('telegramToken').value = this.config.telegramToken || '';
+                document.getElementById('telegramChatId').value = this.config.telegramChatId || '';
+                document.getElementById('notifyReceive').checked = this.config.notifyReceive !== false;
+                document.getElementById('notifySend').checked = this.config.notifySend !== false;
+                document.getElementById('notifyError').checked = this.config.notifyError !== false;
+            }
+            
+            updateUI() {
+                this.updateStatusUI();
+                this.updateConfigUI();
+                this.updateBotStatus(this.status.isRunning);
+            }
+            
+            addLog(message, type = 'info') {
+                const terminal = document.getElementById('terminal');
+                const line = document.createElement('div');
+                line.className = `terminal-line ${type}`;
+                
+                const timestamp = new Date().toLocaleTimeString([], { hour12: false });
+                line.textContent = `[${timestamp}] ${message}`;
+                
+                terminal.appendChild(line);
+                terminal.scrollTop = terminal.scrollHeight;
+                
+                // Limit to 200 lines
+                const lines = terminal.querySelectorAll('.terminal-line');
+                if (lines.length > 200) {
+                    lines[0].remove();
+                }
+            }
+            
+            showNotification(message, type = 'info') {
+                const existing = document.querySelector('.notification');
+                if (existing) existing.remove();
+                
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                        <div>${message}</div>
+                    </div>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 5000);
+            }
+            
+            setupEventListeners() {
+                // Login
+                document.getElementById('loginBtn').addEventListener('click', () => this.handleLogin());
+                document.getElementById('adminPassword').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.handleLogin();
+                });
+                
+                // Control buttons
+                document.getElementById('btnStart').addEventListener('click', () => {
+                    this.send('start');
+                    this.showNotification('Starting bot...', 'info');
+                });
+                
+                document.getElementById('btnStop').addEventListener('click', () => {
+                    this.send('stop');
+                    this.showNotification('Stopping bot...', 'info');
+                });
+                
+                document.getElementById('btnTest').addEventListener('click', async () => {
+                    try {
+                        const response = await fetch('/api/test', { method: 'POST' });
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            this.showNotification('Connection test successful', 'success');
+                            this.addLog('Connection test successful', 'success');
+                        } else {
+                            throw new Error(data.error);
+                        }
+                    } catch (error) {
+                        this.showNotification(`Test failed: ${error.message}`, 'error');
+                        this.addLog(`Test failed: ${error.message}`, 'error');
+                    }
+                });
+                
+                // Tabs
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const tabName = tab.dataset.tab;
+                        
+                        // Hide all tabs
+                        document.querySelectorAll('.tab-content').forEach(content => {
+                            content.classList.remove('active');
+                        });
+                        
+                        document.querySelectorAll('.tab').forEach(t => {
+                            t.classList.remove('active');
+                        });
+                        
+                        // Show selected tab
+                        document.getElementById(`${tabName}-tab`).classList.add('active');
+                        tab.classList.add('active');
+                    });
+                });
+                
+                // Network change
+                document.getElementById('network').addEventListener('change', (e) => {
+                    const endpoints = {
+                        mainnet: 'https://api.trongrid.io\nhttps://api.tronstack.io\nhttps://tron-mainnet.nodeinfra.com',
+                        shasta: 'https://api.shasta.trongrid.io\nhttps://shasta.tronscan.org/api',
+                        nile: 'https://nile.trongrid.io\nhttps://nile.tronscan.org/api'
+                    };
+                    
+                    document.getElementById('rpcEndpoints').value = endpoints[e.target.value] || endpoints.shasta;
+                });
+            }
+            
+            async handleLogin() {
+                const password = document.getElementById('adminPassword').value;
+                const errorElement = document.getElementById('loginError');
+                
+                if (!password) {
+                    errorElement.textContent = 'Password required';
+                    errorElement.style.display = 'block';
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Successful login
+                        document.getElementById('loginScreen').style.display = 'none';
+                        document.getElementById('mainInterface').style.display = 'block';
+                        document.getElementById('adminPassword').value = '';
+                        
+                        this.addLog('🔓 Admin authentication successful', 'success');
+                        this.addLog('📊 Loading dashboard...', 'info');
+                        
+                        // Load initial config
+                        await this.loadInitialConfig();
+                        
+                    } else {
+                        errorElement.style.display = 'block';
+                        document.getElementById('adminPassword').value = '';
+                        document.getElementById('adminPassword').focus();
+                    }
+                } catch (error) {
+                    errorElement.textContent = 'Login failed';
+                    errorElement.style.display = 'block';
+                }
+            }
+            
+            async loadInitialConfig() {
+                try {
+                    const response = await fetch('/api/config');
+                    this.config = await response.json();
+                    this.updateConfigUI();
+                } catch (error) {
+                    console.error('Failed to load config:', error);
+                }
+            }
+            
+            async saveConfig() {
+                try {
+                    const config = this.collectConfigFromUI();
+                    
+                    const response = await fetch('/api/config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showNotification('Configuration saved', 'success');
+                        this.addLog('Configuration saved', 'success');
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } catch (error) {
+                    this.showNotification(`Save failed: ${error.message}`, 'error');
+                    this.addLog(`Save failed: ${error.message}`, 'error');
+                }
+            }
+            
+            collectConfigFromUI() {
+                const config = {
+                    network: document.getElementById('network').value,
+                    tronApiKey: document.getElementById('tronApiKey').value.trim(),
+                    rpcEndpoints: document.getElementById('rpcEndpoints').value.split('\n')
+                        .map(e => e.trim()).filter(e => e),
+                    monitorAddresses: document.getElementById('monitorAddresses').value.split('\n')
+                        .map(a => a.trim()).filter(a => a),
+                    receiverAddress: document.getElementById('receiverAddress').value.trim(),
+                    minAmount: parseFloat(document.getElementById('minAmount').value) || 1,
+                    autoWithdraw: document.getElementById('autoWithdraw').checked,
+                    multisigMode: document.getElementById('multisigMode').value,
+                    requiredSignatures: parseInt(document.getElementById('requiredSignatures').value) || 2,
+                    checkInterval: (parseInt(document.getElementById('checkInterval').value) || 10) * 1000,
+                    feeLimit: parseFloat(document.getElementById('feeLimit').value) || 5,
+                    randomIntervals: document.getElementById('randomIntervals').checked,
+                    autoRetry: document.getElementById('autoRetry').checked,
+                    autoSwitchRPC: document.getElementById('autoSwitchRPC').checked,
+                    telegramToken: document.getElementById('telegramToken').value.trim(),
+                    telegramChatId: document.getElementById('telegramChatId').value.trim(),
+                    notifyReceive: document.getElementById('notifyReceive').checked,
+                    notifySend: document.getElementById('notifySend').checked,
+                    notifyError: document.getElementById('notifyError').checked
+                };
+                
+                // Collect signer keys
+                const signerKey1 = document.getElementById('signerKey1').value.trim();
+                const signerKey2 = document.getElementById('signerKey2').value.trim();
+                config.signerKeys = [];
+                if (signerKey1) config.signerKeys.push(signerKey1);
+                if (signerKey2) config.signerKeys.push(signerKey2);
+                
+                return config;
+            }
+            
+            setupAutoSave() {
+                // Auto-save every 5 minutes
+                setInterval(() => {
+                    if (this.isConnected) {
+                        this.saveConfig();
+                    }
+                }, 300000);
+            }
+        }
+        
+        // Global functions
+        function logout() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('mainInterface').style.display = 'none';
+            location.reload();
+        }
+        
+        function saveConfig() {
+            if (window.client) {
+                window.client.saveConfig();
+            }
+        }
+        
+        // Initialize client when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.client = new WebClient();
+            document.getElementById('adminPassword').focus();
+        });
+    </script>
+</body>
+</html>
