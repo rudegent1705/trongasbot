@@ -91,247 +91,74 @@ class TronQuantumBotServer {
         this.setupMiddleware();
         this.setupRoutes();
         this.setupWebSocket();
-        this.initializeServer();
-    }
-    
-    async initializeServer() {
-        await this.loadConfig();
-        await this.loadState();
-        
-        // Auto-start bot if enabled
-        if (this.state.config.autoStartOnBoot !== false) {
-            setTimeout(() => {
-                this.startBot().catch(err => {
-                    this.log(`Auto-start failed: ${err.message}`, 'error');
-                });
-            }, 5000);
-        }
-        
-        this.setupCrashRecovery();
-        this.setupKeepAlive();
-    }
-    
-    setupKeepAlive() {
-        // Prevent Render from sleeping
-        setInterval(() => {
-            if (this.state.isRunning) {
-                this.log('🔄 Keep-alive ping', 'info');
-                
-                if (!this.state.isConnected) {
-                    this.initTronWeb().catch(() => {});
-                }
-            }
-        }, 300000);
-        
-        // Self-ping to keep server active
-        if (process.env.RENDER) {
-            const pingUrl = process.env.RENDER_EXTERNAL_URL;
-            if (pingUrl) {
-                setInterval(async () => {
-                    try {
-                        await axios.get(`${pingUrl}/health`);
-                        this.log('🏓 Self-ping successful', 'info');
-                    } catch (error) {
-                        // Ignore ping errors
-                    }
-                }, 600000);
-            }
-        }
-    }
-    
-    setupCrashRecovery() {
-        process.on('uncaughtException', async (error) => {
-            this.log(`💥 Uncaught Exception: ${error.message}`, 'error');
-            this.log(error.stack, 'error');
-            await this.handleCrash();
-        });
-        
-        process.on('unhandledRejection', async (error) => {
-            this.log(`💥 Unhandled Rejection: ${error.message}`, 'error');
-            await this.handleCrash();
-        });
-        
-        process.on('SIGTERM', async () => {
-            this.log('📴 Received SIGTERM signal', 'warning');
-            await this.gracefulShutdown();
-            process.exit(0);
-        });
-        
-        process.on('SIGINT', async () => {
-            this.log('📴 Received SIGINT signal', 'warning');
-            await this.gracefulShutdown();
-            process.exit(0);
-        });
-    }
-    
-    async handleCrash() {
-        this.state.crashCount++;
-        this.state.lastCrashTime = Date.now();
-        
-        await this.saveState();
-        
-        this.log(`⚠️ Crash #${this.state.crashCount}`, 'warning');
-        
-        if (this.state.config.autoRestartOnCrash) {
-            const timeSinceLastCrash = Date.now() - (this.state.lastCrashTime || 0);
-            
-            if (timeSinceLastCrash > this.state.config.crashResetTime) {
-                this.state.crashCount = 1;
-            }
-            
-            if (this.state.crashCount > this.state.config.maxCrashThreshold) {
-                this.log('❌ Too many crashes, disabling auto-restart', 'error');
-                this.state.config.autoRestartOnCrash = false;
-                await this.saveConfigToFile();
-                return;
-            }
-            
-            this.log('🔄 Attempting to restart bot in 10 seconds...', 'warning');
-            
-            this.state.isConnected = false;
-            this.state.tronWeb = null;
-            
-            setTimeout(() => {
-                if (!this.state.isRunning) {
-                    this.startBot().catch(err => {
-                        this.log(`Restart failed: ${err.message}`, 'error');
-                    });
-                }
-            }, 10000);
-        }
-    }
-    
-    async gracefulShutdown() {
-        this.log('🛑 Performing graceful shutdown...', 'warning');
-        
-        await this.saveState();
-        
-        if (this.state.isRunning) {
-            this.stopBot();
-        }
-        
-        this.state.activeConnections.forEach(ws => {
-            try { ws.close(); } catch (e) {}
-        });
-        
-        this.log('✅ Graceful shutdown complete', 'success');
-    }
-    
-    async loadState() {
-        try {
-            const data = await fs.readFile(this.statePath, 'utf8');
-            const savedState = JSON.parse(data);
-            
-            this.state.processedTransactions = savedState.processedTransactions || 0;
-            this.state.totalForwarded = savedState.totalForwarded || 0;
-            this.state.crashCount = savedState.crashCount || 0;
-            this.state.lastCrashTime = savedState.lastCrashTime || null;
-            
-            this.log('📁 Bot state loaded from file', 'info');
-        } catch (error) {
-            this.log('No saved state found, starting fresh', 'info');
-        }
-    }
-    
-    async saveState() {
-        try {
-            const state = {
-                processedTransactions: this.state.processedTransactions,
-                totalForwarded: this.state.totalForwarded,
-                crashCount: this.state.crashCount,
-                lastCrashTime: this.state.lastCrashTime,
-                lastSaved: Date.now()
-            };
-            
-            await fs.writeFile(this.statePath, JSON.stringify(state, null, 2));
-            this.log('📁 Bot state saved', 'info');
-        } catch (error) {
-            this.log(`Failed to save state: ${error.message}`, 'error');
-        }
     }
     
     setupMiddleware() {
-        // ✅ CRITICAL FIX: Properly serve static files from public directory
+        // CRITICAL FIX: Serve static files from public directory
         const publicPath = path.join(__dirname, 'public');
         
-        // Log the public path for debugging
         console.log(`📁 Serving static files from: ${publicPath}`);
         
         // Check if public directory exists
         fs.access(publicPath).then(() => {
             console.log('✅ Public directory found');
+            
+            // List files in public directory for debugging
+            fs.readdir(publicPath).then(files => {
+                console.log(`📄 Files in public: ${files.join(', ')}`);
+            }).catch(console.error);
+            
         }).catch(() => {
             console.log('❌ Public directory not found! Creating it...');
             fs.mkdir(publicPath, { recursive: true }).catch(console.error);
         });
         
-        // Serve static files with proper MIME types
-        this.app.use(express.static(publicPath, {
-            index: 'index.html',
-            extensions: ['html', 'htm'],
-            setHeaders: (res, filepath) => {
-                // Set proper content type for HTML files
-                if (filepath.endsWith('.html')) {
-                    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-                }
-                // Cache control for better performance
-                res.setHeader('Cache-Control', 'public, max-age=3600');
-            }
-        }));
+        // Serve static files
+        this.app.use(express.static(publicPath));
+        
+        // Important: Also serve from root path explicitly
+        this.app.use('/', express.static(publicPath));
         
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true }));
     }
     
     setupRoutes() {
-        // ✅ FIXED: Explicit route for root to serve index.html
+        // Root route - explicitly serve index.html
         this.app.get('/', (req, res) => {
             const indexPath = path.join(__dirname, 'public', 'index.html');
+            console.log(`📄 Attempting to serve: ${indexPath}`);
             
-            // Check if file exists and serve it
-            fs.access(indexPath).then(() => {
-                res.sendFile(indexPath);
-            }).catch(() => {
-                // If index.html doesn't exist, create a basic one
-                this.log('⚠️ index.html not found, serving basic interface', 'warning');
-                res.send(`
-                    <!DOCTYPE html>
-                    <html>
-                        <head>
-                            <title>TRON Quantum Bot</title>
-                            <meta http-equiv="refresh" content="0;url=/" />
-                        </head>
-                        <body>
-                            <h1>TRON Quantum Bot</h1>
-                            <p>Loading interface...</p>
-                            <script>
-                                window.location.href = '/';
-                            </script>
-                        </body>
-                    </html>
-                `);
-            });
-        });
-        
-        // ✅ FIXED: Serve index.html for all routes (SPA fallback)
-        this.app.get('*', (req, res, next) => {
-            // Skip API routes
-            if (req.path.startsWith('/api/') || req.path.startsWith('/health') || req.path.startsWith('/ws')) {
-                return next();
-            }
-            
-            // Skip static file requests that have extensions
-            if (req.path.includes('.')) {
-                return next();
-            }
-            
-            // Serve index.html for all other routes
-            const indexPath = path.join(__dirname, 'public', 'index.html');
-            res.sendFile(indexPath, (err) => {
-                if (err) {
-                    next();
-                }
-            });
+            fs.access(indexPath)
+                .then(() => {
+                    res.sendFile(indexPath);
+                })
+                .catch((err) => {
+                    console.error(`❌ index.html not found: ${err.message}`);
+                    res.status(404).send(`
+                        <!DOCTYPE html>
+                        <html>
+                            <head>
+                                <title>TRON Quantum Bot</title>
+                                <style>
+                                    body { font-family: monospace; padding: 40px; background: #0a0a1a; color: #00e5ff; }
+                                    .error { color: #ff0055; }
+                                    pre { background: #050510; padding: 20px; border-radius: 8px; color: #00ffaa; }
+                                </style>
+                            </head>
+                            <body>
+                                <h1>🚀 TRON Quantum Bot</h1>
+                                <h2 class="error">⚠️ index.html not found in public directory!</h2>
+                                <p>Please make sure your index.html file is in the <code>public</code> folder.</p>
+                                <h3>Debug Info:</h3>
+                                <pre>
+Current Directory: ${__dirname}
+Public Directory: ${path.join(__dirname, 'public')}
+                                </pre>
+                            </body>
+                        </html>
+                    `);
+                });
         });
         
         // API endpoints
@@ -385,36 +212,9 @@ class TronQuantumBotServer {
         });
         
         this.app.get('/api/status', (req, res) => {
-            res.json({
-                isRunning: this.state.isRunning,
-                isConnected: this.state.isConnected,
-                processedTransactions: this.state.processedTransactions,
-                totalForwarded: this.state.totalForwarded,
-                currentBlock: this.state.currentBlock,
-                uptime: this.state.startTime ? Date.now() - this.state.startTime : 0,
-                signersCount: this.state.config.signerKeys.length,
-                crashCount: this.state.crashCount
-            });
+            res.json(this.getStatus());
         });
         
-        this.app.get('/api/export', (req, res) => {
-            const configStr = JSON.stringify(this.state.config, null, 2);
-            res.setHeader('Content-Disposition', 'attachment; filename="tron-quantum-bot-config.json"');
-            res.setHeader('Content-Type', 'application/json');
-            res.send(configStr);
-        });
-        
-        this.app.post('/api/import', async (req, res) => {
-            try {
-                const imported = req.body;
-                await this.updateConfig(imported);
-                res.json({ success: true });
-            } catch (error) {
-                res.status(500).json({ success: false, error: error.message });
-            }
-        });
-        
-        // Health check endpoint
         this.app.get('/health', (req, res) => {
             res.json({
                 status: 'healthy',
@@ -422,9 +222,23 @@ class TronQuantumBotServer {
                 botRunning: this.state.isRunning,
                 botConnected: this.state.isConnected,
                 timestamp: Date.now(),
-                publicDir: path.join(__dirname, 'public'),
-                nodeEnv: process.env.NODE_ENV,
-                render: !!process.env.RENDER
+                port: process.env.PORT || 3000
+            });
+        });
+        
+        // Catch-all route - serve index.html for client-side routing
+        this.app.get('*', (req, res, next) => {
+            // Skip API routes
+            if (req.path.startsWith('/api/') || req.path.startsWith('/health')) {
+                return next();
+            }
+            
+            // Serve index.html for all other routes
+            const indexPath = path.join(__dirname, 'public', 'index.html');
+            res.sendFile(indexPath, (err) => {
+                if (err) {
+                    next();
+                }
             });
         });
     }
@@ -976,35 +790,199 @@ class TronQuantumBotServer {
         });
     }
     
-    start(port = process.env.PORT || 3000) {
-        this.server.listen(port, '0.0.0.0', () => {
-            console.log('\n' + '='.repeat(60));
-            console.log(`🚀 TRON Quantum Bot Server Started`);
-            console.log('='.repeat(60));
-            console.log(`📡 Port: ${port}`);
-            console.log(`🌐 Web Interface: http://localhost:${port}`);
-            console.log(`📁 Public Directory: ${path.join(__dirname, 'public')}`);
-            console.log(`🤖 Bot Status: ${this.state.isRunning ? 'Running' : 'Stopped'}`);
-            console.log(`🔄 Auto-start: ${this.state.config.autoStartOnBoot ? 'Enabled' : 'Disabled'}`);
-            console.log(`💪 Crash Recovery: ${this.state.config.autoRestartOnCrash ? 'Enabled' : 'Disabled'}`);
+    async initialize() {
+        await this.loadConfig();
+        await this.loadState();
+        
+        // Auto-start bot if enabled
+        if (this.state.config.autoStartOnBoot !== false) {
+            setTimeout(() => {
+                this.startBot().catch(err => {
+                    this.log(`Auto-start failed: ${err.message}`, 'error');
+                });
+            }, 5000);
+        }
+        
+        this.setupCrashRecovery();
+        this.setupKeepAlive();
+    }
+    
+    async loadState() {
+        try {
+            const data = await fs.readFile(this.statePath, 'utf8');
+            const savedState = JSON.parse(data);
             
-            if (process.env.RENDER) {
-                console.log(`☁️ Render URL: ${process.env.RENDER_EXTERNAL_URL || 'Not available'}`);
-                console.log(`💾 Persistent Disk: /opt/render/project/src`);
+            this.state.processedTransactions = savedState.processedTransactions || 0;
+            this.state.totalForwarded = savedState.totalForwarded || 0;
+            this.state.crashCount = savedState.crashCount || 0;
+            this.state.lastCrashTime = savedState.lastCrashTime || null;
+            
+            this.log('📁 Bot state loaded from file', 'info');
+        } catch (error) {
+            this.log('No saved state found, starting fresh', 'info');
+        }
+    }
+    
+    async saveState() {
+        try {
+            const state = {
+                processedTransactions: this.state.processedTransactions,
+                totalForwarded: this.state.totalForwarded,
+                crashCount: this.state.crashCount,
+                lastCrashTime: this.state.lastCrashTime,
+                lastSaved: Date.now()
+            };
+            
+            await fs.writeFile(this.statePath, JSON.stringify(state, null, 2));
+            this.log('📁 Bot state saved', 'info');
+        } catch (error) {
+            this.log(`Failed to save state: ${error.message}`, 'error');
+        }
+    }
+    
+    setupCrashRecovery() {
+        process.on('uncaughtException', async (error) => {
+            this.log(`💥 Uncaught Exception: ${error.message}`, 'error');
+            this.log(error.stack, 'error');
+            await this.handleCrash();
+        });
+        
+        process.on('unhandledRejection', async (error) => {
+            this.log(`💥 Unhandled Rejection: ${error.message}`, 'error');
+            await this.handleCrash();
+        });
+        
+        process.on('SIGTERM', async () => {
+            this.log('📴 Received SIGTERM signal', 'warning');
+            await this.gracefulShutdown();
+            process.exit(0);
+        });
+        
+        process.on('SIGINT', async () => {
+            this.log('📴 Received SIGINT signal', 'warning');
+            await this.gracefulShutdown();
+            process.exit(0);
+        });
+    }
+    
+    async handleCrash() {
+        this.state.crashCount++;
+        this.state.lastCrashTime = Date.now();
+        
+        await this.saveState();
+        
+        this.log(`⚠️ Crash #${this.state.crashCount}`, 'warning');
+        
+        if (this.state.config.autoRestartOnCrash) {
+            const timeSinceLastCrash = Date.now() - (this.state.lastCrashTime || 0);
+            
+            if (timeSinceLastCrash > this.state.config.crashResetTime) {
+                this.state.crashCount = 1;
             }
             
-            console.log('='.repeat(60) + '\n');
+            if (this.state.crashCount > this.state.config.maxCrashThreshold) {
+                this.log('❌ Too many crashes, disabling auto-restart', 'error');
+                this.state.config.autoRestartOnCrash = false;
+                await this.saveConfigToFile();
+                return;
+            }
+            
+            this.log('🔄 Attempting to restart bot in 10 seconds...', 'warning');
+            
+            this.state.isConnected = false;
+            this.state.tronWeb = null;
+            
+            setTimeout(() => {
+                if (!this.state.isRunning) {
+                    this.startBot().catch(err => {
+                        this.log(`Restart failed: ${err.message}`, 'error');
+                    });
+                }
+            }, 10000);
+        }
+    }
+    
+    async gracefulShutdown() {
+        this.log('🛑 Performing graceful shutdown...', 'warning');
+        
+        await this.saveState();
+        
+        if (this.state.isRunning) {
+            this.stopBot();
+        }
+        
+        this.state.activeConnections.forEach(ws => {
+            try { ws.close(); } catch (e) {}
+        });
+        
+        this.log('✅ Graceful shutdown complete', 'success');
+    }
+    
+    setupKeepAlive() {
+        // Prevent Render from sleeping
+        setInterval(() => {
+            if (this.state.isRunning) {
+                this.log('🔄 Keep-alive ping', 'info');
+                
+                if (!this.state.isConnected) {
+                    this.initTronWeb().catch(() => {});
+                }
+            }
+        }, 300000);
+        
+        // Self-ping to keep server active
+        if (process.env.RENDER) {
+            const pingUrl = process.env.RENDER_EXTERNAL_URL;
+            if (pingUrl) {
+                setInterval(async () => {
+                    try {
+                        await axios.get(`${pingUrl}/health`);
+                        this.log('🏓 Self-ping successful', 'info');
+                    } catch (error) {
+                        // Ignore ping errors
+                    }
+                }, 600000);
+            }
+        }
+    }
+    
+    start(port = process.env.PORT || 3000) {
+        // Initialize first
+        this.initialize().then(() => {
+            // Then start the server
+            this.server.listen(port, '0.0.0.0', () => {
+                console.log('\n' + '='.repeat(60));
+                console.log(`🚀 TRON Quantum Bot Server Started`);
+                console.log('='.repeat(60));
+                console.log(`📡 Port: ${port}`);
+                console.log(`🌐 Web Interface: http://localhost:${port}`);
+                console.log(`📁 Public Directory: ${path.join(__dirname, 'public')}`);
+                console.log(`🤖 Bot Status: ${this.state.isRunning ? 'Running' : 'Stopped'}`);
+                console.log(`🔄 Auto-start: ${this.state.config.autoStartOnBoot ? 'Enabled' : 'Disabled'}`);
+                console.log(`💪 Crash Recovery: ${this.state.config.autoRestartOnCrash ? 'Enabled' : 'Disabled'}`);
+                
+                if (process.env.RENDER) {
+                    console.log(`☁️ Render URL: ${process.env.RENDER_EXTERNAL_URL || 'Not available'}`);
+                    console.log(`💾 Persistent Disk: /opt/render/project/src`);
+                }
+                
+                console.log('='.repeat(60) + '\n');
+            });
+        }).catch(err => {
+            console.error('Failed to initialize:', err);
+            process.exit(1);
         });
     }
 }
 
-// Create the bot instance
+// CRITICAL FIX: Always start the server, regardless of environment
 const bot = new TronQuantumBotServer();
 
-// Export for serverless environments
-if (process.env.RENDER || process.env.VERCEL) {
+// Start the server immediately
+const port = process.env.PORT || 3000;
+bot.start(port);
+
+// Export for Vercel if needed
+if (process.env.VERCEL) {
     module.exports = bot.app;
-} else {
-    // Start the server normally
-    bot.start();
 }

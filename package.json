@@ -6,10 +6,8 @@
     "scripts": {
         "start": "bash start.sh",
         "dev": "nodemon server.js",
-        "build": "echo 'Building for Render...' && mkdir -p public",
-        "postinstall": "chmod +x start.sh",
-        "vercel-build": "echo 'Building for Vercel...'",
-        "render-build": "npm install && mkdir -p public"
+        "build": "mkdir -p public",
+        "postinstall": "chmod +x start.sh"
     },
     "dependencies": {
         "@noble/secp256k1": "^3.0.0",
